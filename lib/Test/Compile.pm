@@ -94,6 +94,7 @@ sub all_pm_files_ok {
 
 sub all_pl_files_ok {
     my @files = @_ ? @_ : all_pl_files();
+    $Test->skip_all("no pl files found") unless @files;
     $Test->plan(tests => scalar @files);
     my $ok = 1;
     for (@files) {
@@ -134,27 +135,28 @@ sub all_pl_files {
     my @queue = @_ ? @_ : _pl_starting_points();
     my @pl;
     while (@queue) {
-        my $file = shift @queue;
-        if (-d $file) {
-            local *DH;
-            opendir DH, $file or next;
-            my @newfiles = readdir DH;
-            closedir DH;
-            @newfiles = File::Spec->no_upwards(@newfiles);
-            @newfiles = grep { $_ ne "CVS" && $_ ne ".svn" } @newfiles;
-            for my $newfile (@newfiles) {
-                my $filename = File::Spec->catfile($file, $newfile);
-                if (-f $filename) {
-                    push @queue, $filename;
-                } else {
-                    push @queue, File::Spec->catdir($file, $newfile);
+        if ( my $file = shift @queue ) {
+            if (-d $file) {
+                local *DH;
+                opendir DH, $file or next;
+                my @newfiles = readdir DH;
+                closedir DH;
+                @newfiles = File::Spec->no_upwards(@newfiles);
+                @newfiles = grep { $_ ne "CVS" && $_ ne ".svn" } @newfiles;
+                for my $newfile (@newfiles) {
+                    my $filename = File::Spec->catfile($file, $newfile);
+                    if (-f $filename) {
+                        push @queue, $filename;
+                    } else {
+                        push @queue, File::Spec->catdir($file, $newfile);
+                    }
                 }
             }
-        }
-        if (-f $file) {
+            if (-f $file) {
 
-            # Only accept files with no extension or extension .pl
-            push @pl, $file if $file =~ /(?:^[^.]+$|\.pl$)/;
+                # Only accept files with no extension or extension .pl
+                push @pl, $file if $file =~ /(?:^[^.]+$|\.pl$)/;
+            }
         }
     }
     @pl;

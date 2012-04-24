@@ -1,4 +1,4 @@
-package Test::Compile;
+package Test::Compile::OO;
 
 use 5.006;
 use warnings;
@@ -7,88 +7,191 @@ use strict;
 use Test::Builder;
 use File::Spec;
 use UNIVERSAL::require;
-use Test::Compile::OO;
 
 our $VERSION = '0.17_01';
 my $Test = Test::Builder->new;
-my $tco = Test::Compile::OO->new();
 
-BEGIN {
-  my $f = __FILE__;
-  my $p = __PACKAGE__;
-  my $v = "0.17_01";
-  print STDERR "\nCompiling $p ($v) from $f\n";
-}
+sub new {
+    my $class = shift;
+    my $self  = {};
 
-sub import {
-    my $self   = shift;
-    my $caller = caller;
-    for my $func (
-        qw(
-        pm_file_ok pl_file_ok all_pm_files all_pl_files all_pm_files_ok
-        all_pl_files_ok
-        )
-      ) {
-        no strict 'refs';
-        *{ $caller . "::" . $func } = \&$func;
-    }
-    $Test->exported_to($caller);
-    $Test->plan(@_);
+    bless ($self, $class);
+    return $self;
 }
 
 sub pm_file_ok {
+    my $self = shift;
     my $file = shift;
     my $name = @_ ? shift : "Compile test for $file";
 
-    return $tco->pm_file_ok($file,$name);
+    my $ok = $self->_run_in_subprocess(sub{$self->_check_syntax($file,1)});
+
+    $Test->ok($ok, $name);
+    $Test->diag("$file does not compile") unless $ok;
+    return $ok;
 }
 
 sub pl_file_ok {
+    my $self = shift;
     my $file = shift;
     my $name = @_ ? shift : "Compile test for $file";
     my $verbose = shift;
 
-    return $tco->pl_file_ok($file,$name,$verbose);
+    # don't "use Devel::CheckOS" because Test::Compile is included by
+    # Module::Install::StandardTests, and we don't want to have to ship
+    # Devel::CheckOS with M::I::T as well.
+    if (Devel::CheckOS->require) {
+
+        # Exclude VMS because $^X doesn't work. In general perl is a symlink to
+        # perlx.y.z but VMS stores symlinks differently...
+        unless (Devel::CheckOS::os_is('OSFeatures::POSIXShellRedirection')
+            and Devel::CheckOS::os_isnt('VMS')) {
+            $Test->skip('Test not compatible with your OS');
+            return;
+        }
+    }
+
+    my $ok = $self->_run_in_subprocess(sub{$self->_check_syntax($file,0)},$verbose);
+
+    $Test->ok($ok, $name);
+    $Test->diag("$file does not compile") unless $ok;
+    return $ok;
 }
 
 sub all_pm_files_ok {
-    return $tco->all_pm_files_ok(@_);
+    my $self = shift;
+    my @files = @_ ? @_ : $self->all_pm_files();
+    $Test->plan(tests => scalar @files);
+    my $ok = 1;
+    for (@files) {
+        $self->pm_file_ok($_) or undef $ok;
+    }
+    $ok;
 }
 
 sub all_pl_files_ok {
-    return $tco->all_pl_files_ok(@_);
+    my $self = shift;
+    my @files = @_ ? @_ : $self->all_pl_files();
+    $Test->skip_all("no pl files found") unless @files;
+    $Test->plan(tests => scalar @files);
+    my $ok = 1;
+    for (@files) {
+        $self->pl_file_ok($_) or undef $ok;
+    }
+    $ok;
 }
 
 sub all_pm_files {
-    return $tco->all_pm_files(@_);
+    my $self = shift;
+    my @queue = @_ ? @_ : $self->_pm_starting_points();
+
+    my @pm;
+    for my $file ( $self->_find_files(@queue) ) {
+        if (-f $file) {
+            push @pm, $file if $file =~ /\.pm$/;
+        }
+    }
+    return @pm;
 }
 
 sub all_pl_files {
-    return $tco->all_pl_files(@_);
+    my $self = shift;
+    my @queue = @_ ? @_ : $self->_pl_starting_points();
+
+    my @pl;
+    for my $file ( $self->_find_files(@queue) ) {
+        if (defined($file) && -f $file) {
+            # Only accept files with no extension or extension .pl
+            push @pl, $file if $file =~ /(?:^[^.]+$|\.pl$)/;
+        }
+    }
+    return @pl;
 }
 
 sub _run_in_subprocess {
-    return $tco->_run_in_subprocess(@_);
+    my ($self,$closure,$verbose) = @_;
+
+    my $pid = fork();
+    if ( ! defined($pid) ) {
+        return 0;
+    } elsif ( $pid ) {
+        wait();
+        return ($? ? 0 : 1);
+    } else {
+        if ( !$verbose ) {
+          close(STDERR);
+        }
+        my $rv = $closure->();
+        exit ($rv ? 0 : 1);
+    }
 }
 
 sub _check_syntax {
-    return $tco->_check_syntax(@_);
+    my ($self,$file,$require) = @_;
+
+    if (-f $file) {
+        if ( $require ) {
+            my $module = $file;
+            $module =~ s!^(blib[/\\])?lib[/\\]!!;
+            $module =~ s![/\\]!::!g;
+            $module =~ s/\.pm$//;
+    
+            $module->use;
+            return ($@ ? 0 : 1);
+        } else {
+            my @perl5lib = split(':', ($ENV{PERL5LIB}||""));
+            my $taint = $self->_is_in_taint_mode($file);
+            unshift @perl5lib, 'blib/lib';
+            system($^X, (map { "-I$_" } @perl5lib), "-c$taint", $file);
+            return ($? ? 0 : 1);
+        }
+    }
 }
 
 sub _find_files {
-    return $tco->_find_files(@_);
+    my ($self,@queue) = @_;
+
+    for my $file (@queue) {
+        if (defined($file) && -d $file) {
+            local *DH;
+            opendir DH, $file or next;
+            my @newfiles = readdir DH;
+            closedir DH;
+            @newfiles = File::Spec->no_upwards(@newfiles);
+            @newfiles = grep { $_ ne "CVS" && $_ ne ".svn" } @newfiles;
+            for my $newfile (@newfiles) {
+                my $filename = File::Spec->catfile($file, $newfile);
+                if (-f $filename) {
+                    push @queue, $filename;
+                } else {
+                    push @queue, File::Spec->catdir($file, $newfile);
+                }
+            }
+        }
+    }
+    return @queue;
 }
 
 sub _pm_starting_points {
-    return $tco->_pm_starting_points();
+    return 'blib' if -e 'blib';
+    return 'lib';
 }
 
 sub _pl_starting_points {
-    return $tco->_pl_starting_points();
+    return 'script' if -e 'script';
+    return 'bin'    if -e 'bin';
 }
 
 sub _is_in_taint_mode {
-    return $tco->_is_in_taint_mode(@_);
+    my ($self,$file) = @_;
+
+    open(my $f, "<", $file) or die "could not open $file";
+    my $shebang = <$f>;
+    my $taint = "";
+    if ($shebang =~ /^#![\/\w]+\s+\-w?([tT])/) {
+        $taint = $1;
+    }
+    return $taint;
 }
 
 1;

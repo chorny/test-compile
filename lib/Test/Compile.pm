@@ -37,18 +37,11 @@ sub import {
 }
 
 sub pm_file_ok {
-    my $file = shift;
-    my $name = @_ ? shift : "Compile test for $file";
-
-    return $tco->pm_file_ok($file,$name);
+    return $tco->pm_file_ok(@_);
 }
 
 sub pl_file_ok {
-    my $file = shift;
-    my $name = @_ ? shift : "Compile test for $file";
-    my $verbose = shift;
-
-    return $tco->pl_file_ok($file,$name,$verbose);
+    return $tco->pl_file_ok(@_);
 }
 
 sub all_pm_files_ok {

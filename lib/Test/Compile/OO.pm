@@ -10,11 +10,12 @@ use UNIVERSAL::require;
 
 our $VERSION = '0.17_01';
 
-my $Test = Test::Builder->new;
-
 sub new {
     my $class = shift;
-    my $self  = {};
+
+    my $self  = {
+        TestBuilder => Test::Builder->new(),
+    };
 
     bless ($self, $class);
     return $self;
@@ -27,8 +28,8 @@ sub pm_file_ok {
 
     my $ok = $self->_run_in_subprocess(sub{$self->_check_syntax($file,1)});
 
-    $Test->ok($ok, $name);
-    $Test->diag("$file does not compile") unless $ok;
+    $self->{TestBuilder}->ok($ok, $name);
+    $self->{TestBuilder}->diag("$file does not compile") unless $ok;
     return $ok;
 }
 
@@ -47,22 +48,22 @@ sub pl_file_ok {
         # perlx.y.z but VMS stores symlinks differently...
         unless (Devel::CheckOS::os_is('OSFeatures::POSIXShellRedirection')
             and Devel::CheckOS::os_isnt('VMS')) {
-            $Test->skip('Test not compatible with your OS');
+            $self->{TestBuilder}->skip('Test not compatible with your OS');
             return;
         }
     }
 
     my $ok = $self->_run_in_subprocess(sub{$self->_check_syntax($file,0)},$verbose);
 
-    $Test->ok($ok, $name);
-    $Test->diag("$file does not compile") unless $ok;
+    $self->{TestBuilder}->ok($ok, $name);
+    $self->{TestBuilder}->diag("$file does not compile") unless $ok;
     return $ok;
 }
 
 sub all_pm_files_ok {
     my $self = shift;
     my @files = @_ ? @_ : $self->all_pm_files();
-    $Test->plan(tests => scalar @files);
+    $self->{TestBuilder}->plan(tests => scalar @files);
     my $ok = 1;
     for (@files) {
         $self->pm_file_ok($_) or undef $ok;
@@ -73,8 +74,8 @@ sub all_pm_files_ok {
 sub all_pl_files_ok {
     my $self = shift;
     my @files = @_ ? @_ : $self->all_pl_files();
-    $Test->skip_all("no pl files found") unless @files;
-    $Test->plan(tests => scalar @files);
+    $self->{TestBuilder}->skip_all("no pl files found") unless @files;
+    $self->{TestBuilder}->plan(tests => scalar @files);
     my $ok = 1;
     for (@files) {
         $self->pl_file_ok($_) or undef $ok;

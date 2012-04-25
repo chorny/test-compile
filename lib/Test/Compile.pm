@@ -60,30 +60,6 @@ sub all_pl_files {
     return $tco->all_pl_files(@_);
 }
 
-sub _run_in_subprocess {
-    return $tco->_run_in_subprocess(@_);
-}
-
-sub _check_syntax {
-    return $tco->_check_syntax(@_);
-}
-
-sub _find_files {
-    return $tco->_find_files(@_);
-}
-
-sub _pm_starting_points {
-    return $tco->_pm_starting_points();
-}
-
-sub _pl_starting_points {
-    return $tco->_pl_starting_points();
-}
-
-sub _is_in_taint_mode {
-    return $tco->_is_in_taint_mode(@_);
-}
-
 1;
 __END__
 

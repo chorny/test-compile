@@ -1,12 +1,9 @@
 package Test::Compile;
 
-use 5.006;
 use warnings;
 use strict;
 
 use Test::Builder;
-use File::Spec;
-use UNIVERSAL::require;
 use Test::Compile::OO;
 
 our $VERSION = '0.17_01';

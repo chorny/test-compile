@@ -7,8 +7,6 @@ use Test::Builder;
 use Test::Compile::OO;
 
 our $VERSION = '0.17_01';
-my $Test = Test::Builder->new;
-my $tco = Test::Compile::OO->new();
 
 BEGIN {
   my $f = __FILE__;
@@ -19,7 +17,10 @@ BEGIN {
 
 sub import {
     my $self   = shift;
+
     my $caller = caller;
+    my $tco = Test::Compile::OO->new();
+
     for my $func (
         qw(
         pm_file_ok pl_file_ok all_pm_files all_pl_files all_pm_files_ok
@@ -27,35 +28,15 @@ sub import {
         )
       ) {
         no strict 'refs';
-        *{ $caller . "::" . $func } = \&$func;
+        *{ $caller . "::" . $func } = sub {
+            $tco->$func(@_);
+        }
     }
-    $Test->exported_to($caller);
-    $Test->plan(@_);
+    # Hack, we should NOT be refering to the internals of the Test::Compile::OO object 
+    $tco->{TestBuilder}->exported_to($caller);
+    $tco->{TestBuilder}->plan(@_);
 }
 
-sub pm_file_ok {
-    return $tco->pm_file_ok(@_);
-}
-
-sub pl_file_ok {
-    return $tco->pl_file_ok(@_);
-}
-
-sub all_pm_files_ok {
-    return $tco->all_pm_files_ok(@_);
-}
-
-sub all_pl_files_ok {
-    return $tco->all_pl_files_ok(@_);
-}
-
-sub all_pm_files {
-    return $tco->all_pm_files(@_);
-}
-
-sub all_pl_files {
-    return $tco->all_pl_files(@_);
-}
 
 1;
 __END__

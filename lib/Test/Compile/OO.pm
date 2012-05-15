@@ -60,6 +60,18 @@ sub pl_file_ok {
     return $ok;
 }
 
+sub all_files_ok {
+    my ($self) = @_;
+
+    for my $module ( $self->all_pm_files() ) {
+        $self->pm_file_ok($module);
+    }
+    for my $script ( $self->all_pl_files() ) {
+        $self->pl_file_ok($script);
+    }
+    $self->{TestBuilder}->done_testing();
+}
+
 sub all_pm_files_ok {
     my $self = shift;
     my @files = @_ ? @_ : $self->all_pm_files();

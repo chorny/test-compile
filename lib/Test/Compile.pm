@@ -3,7 +3,7 @@ package Test::Compile;
 use warnings;
 use strict;
 
-use version; our $VERSION = qv("v2.0.0");
+use version; our $VERSION = qv("v2.0_0");
 use parent 'Exporter';
 use UNIVERSAL::require;
 use Test::Compile::Internal;
@@ -23,7 +23,7 @@ Test::Compile - Check whether Perl files compile correctly.
     $test->done_testing();
 
     use Test::Compile;
-    # The procedural way (deprecated)
+    # The procedural way (deprecated!)
     use Test::Compile qw( all_pm_files_ok );
     all_pm_files_ok();
 
@@ -176,11 +176,11 @@ Skips all the tests, using the given C<$reason>. Exits immediately with 0.
 
 The use of the following functions is deprecated and strongly discouraged.
 
-They are automatically exported to your namespace,  which is
-no longer considered best practise.  At some stage in the future, this will
-stop and you'll have to import them explicitly.
+The functions used to be automatically exported to your namespace, but that is
+no longer considered best practise.  If you want to keep using them, you'll
+have to import them explicitly.
 
-Even then, you really should use the object oriented methods as they provide
+However, you really should use the object oriented methods as they provide
 a more consistent interface.
 
 =over 4
@@ -197,21 +197,6 @@ you can't use this function with C<all_pl_files_ok()>.  If this is a problem
 you should really be using the object oriented interface.
 
 Returns true if all Perl module files are ok, or false if any fail.
-
-Module authors can include the following in a F<t/00_compile.t> file
-and have C<Test::Compile> automatically find and check all Perl module files
-in a module distribution:
-
-    #!perl -w
-    use strict;
-    use warnings;
-    use Test::More;
-    eval "use Test::Compile";
-    Test::More->builder->BAIL_OUT(
-        "Test::Compile required for testing compilation") if $@;
-    my $test = Test::Compile->new();
-    $test->all_pm_files_ok();
-    $test->done_testing();
 
 =cut
 
@@ -237,21 +222,6 @@ you can't use this function with C<all_pm_files_ok()>.  If this is a problem
 you should really be using the object oriented interface.
 
 Returns true if all Perl script files are ok, or false if any fail.
-
-Module authors can include the following in a F<t/00_compile_scripts.t> file
-and have C<Test::Compile> automatically find and check all Perl script files
-in a module distribution:
-
-    #!perl -w
-    use strict;
-    use warnings;
-    use Test::More;
-    eval "use Test::Compile";
-    plan skip_all => "Test::Compile required for testing compilation"
-      if $@;
-    my $test = Test::Compile->new();
-    $test->all_pl_files_ok();
-    $test->done_testing();
 
 =cut
 

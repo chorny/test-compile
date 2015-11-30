@@ -1,6 +1,6 @@
 Revision history for Perl extension Test-Compile
 
-v2.0.0    UNRELEASED              (Łukasz Hejnak <lehack@lehack.pl>)
+v2.0_0    UNRELEASED              (Łukasz Hejnak <lehack@lehack.pl>)
     - Replaced import() with Exporter usage.
     - Added all_files_ok to the procedural mode.
     - Added .git to list of directories ignored when looking for pm/pl files.

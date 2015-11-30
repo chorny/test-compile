@@ -3,7 +3,7 @@ package Test::Compile::Internal;
 use warnings;
 use strict;
 
-use version; our $VERSION = qv("v1.3.0");
+use version; our $VERSION = qv("v2.0.0");
 use File::Spec;
 use UNIVERSAL::require;
 use Test::Builder;
@@ -171,6 +171,10 @@ sub pl_file_compiles {
                 system($^X, (map { "-I$_" } @inc), "-c$taint", $file);
                 return ($? == 0);
             }
+            else {
+                $self->{test}->diag("$file could not be found") if $self->verbose();
+                return 0;
+            }
         }
     );
 }
@@ -328,7 +332,7 @@ sub _find_files {
             my @newfiles = readdir DH;
             closedir DH;
             @newfiles = File::Spec->no_upwards(@newfiles);
-            @newfiles = grep { $_ ne "CVS" && $_ ne ".svn" } @newfiles;
+            @newfiles = grep { $_ ne "CVS" && $_ ne ".svn" && $_ ne ".git" } @newfiles;
             for my $newfile (@newfiles) {
                 my $filename = File::Spec->catfile($file, $newfile);
                 if (-f $filename) {

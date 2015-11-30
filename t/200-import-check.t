@@ -2,8 +2,11 @@
 
 use strict;
 use warnings;
+
 use Test::More;
-use Test::Exception;
+
+plan skip_all => "Test::Exception required for checking exceptions"
+    unless eval "use Test::Exception; 1";
 
 use Test::Compile;
 Test::Compile::_verbose(0);
@@ -20,8 +23,6 @@ my @METHODS = qw(
     all_pl_files
 );
 
-plan tests => @METHODS + 3;
-
 # try to use the methods, despite not exporting them
 for my $m (@METHODS) {
     is(__PACKAGE__->can($m), undef, "$m not auto-imported");
@@ -30,11 +31,11 @@ for my $m (@METHODS) {
 # now run (inherited) import by hand with specified method
 Test::Compile->import('pl_file_ok');
 
-lives_ok {
+lives_ok ( sub{
     pl_file_ok('t/scripts/subdir/success.pl', 'success.pl compiles');
-} 'pl_file_ok imported correctly';
+}, 'pl_file_ok imported correctly');
 
 # finally use the "all" tag to import all methods and check if it worked
-diag 'Use :all import tag and check if methods got imported correctly';
 Test::Compile->import(':all');
 can_ok(__PACKAGE__, @METHODS);
+done_testing();
